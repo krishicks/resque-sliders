@@ -160,7 +160,6 @@ module Resque
         def startup
           log! "Found RAILS_ENV=#{ENV['RAILS_ENV']}" if ENV['RAILS_ENV']
           enable_gc_optimizations
-          register_signal_handlers
           clean_signal_settings
           register_setting('max_children', @max_children)
           add_to_known_hosts(@hostname)
@@ -172,23 +171,6 @@ module Resque
           if GC.respond_to?(:copy_on_write_friendly=)
             GC.copy_on_write_friendly = true
           end
-        end
-
-        def register_signal_handlers
-          trap('TERM') { shutdown! }
-          trap('INT') { shutdown! }
-
-          begin
-            trap('QUIT') { shutdown! }
-            trap('HUP') { @hupped += 1 }
-            trap('USR1') { log "USR1 received; killing little children..."; set_signal_flag('stop'); signal_usr1 }
-            trap('USR2') { log "USR2 received; not making babies"; set_signal_flag('pause'); signal_usr2 }
-            trap('CONT') { log "CONT received; making babies..."; set_signal_flag('play'); signal_cont }
-          rescue ArgumentError
-            warn "Signals QUIT, USR1, USR2, and/or CONT not supported."
-          end
-
-          log! "Registered signals"
         end
 
         def clean_signal_settings
